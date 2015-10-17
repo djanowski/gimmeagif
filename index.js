@@ -8,13 +8,16 @@ function fetchGif(query) {
     request.get(`http://api.giphy.com/v1/gifs/translate?s=${encodeURIComponent(query)}&api_key=${process.env.GIPHY_API_KEY}`, function(error, response, body) {
       if (error) reject(error);
 
-      const url = JSON.parse(body).data.images.original.url;
+      const payload = JSON.parse(body);
 
-      request.get({ url, encoding: null }, function(error, response, body) {
-        if (error) reject(error);
+      if (payload.data.images) {
+        const url = payload.data.images.original.url;
 
-        resolve(body);
-      });
+        request.get({ url, encoding: null }, function(error, response, body) {
+          if (error) reject(error);
+          resolve(body);
+        });
+      }
     });
   });
 }
