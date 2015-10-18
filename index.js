@@ -2,6 +2,12 @@ const Twit    = require('twit');
 const util    = require('util');
 const request = require('request');
 
+const Twitter = new Twit({
+  consumer_key:        process.env.TWITTER_KEY,
+  consumer_secret:     process.env.TWITTER_SECRET,
+  access_token:        process.env.TWITTER_ACCESS_TOKEN,
+  access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
+});
 
 function fetchGif(query) {
   return new Promise(function(resolve, reject) {
@@ -15,7 +21,7 @@ function fetchGif(query) {
 
         request.get({ url, encoding: null }, function(error, response, body) {
           if (error) reject(error);
-          resolve(body);
+          resolve({ url, gif: body });
         });
       }
     });
@@ -57,22 +63,21 @@ function processMessage(user, query) {
   dm(user, `ok, looking for a '${query}' gif... (powered by giphy!)`);
 
   return fetchGif(query)
-    .then(upload)
-    .then(post)
-    .then(function(tweet) {
-      const url = tweet.entities.media[0].expanded_url;
-      return dm(user, url);
+    .then(function(giphy) {
+      return upload(giphy.gif)
+               .then(post)
+               .then(function(tweet) {
+                 return { url: giphy.url, tweet };
+               });
+    })
+    .then(function(result) {
+      const tweetURL = `https://twitter.com/gimmeagif/status/${result.tweet.id_str}`;
+      const gifURL   = result.url;
+      return dm(user, `download: ${gifURL}\n${tweetURL}`);
     })
     .catch(console.error)
 }
 
-
-const Twitter = new Twit({
-  consumer_key:        process.env.TWITTER_KEY,
-  consumer_secret:     process.env.TWITTER_SECRET,
-  access_token:        process.env.TWITTER_ACCESS_TOKEN,
-  access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
-});
 
 const stream = Twitter.stream('user');
 
